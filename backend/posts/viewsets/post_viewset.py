@@ -24,7 +24,7 @@ class PostViewSet(viewsets.ModelViewSet):
         )
         if self.request.user.is_authenticated:
             queryset = queryset.annotate(
-                is_liked=Exists(
+                _is_liked=Exists(
                     Like.objects.filter(post_id=OuterRef('pk'), user=self.request.user),
                 )
             )

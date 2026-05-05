@@ -2,8 +2,7 @@ from django.db.models import Count
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.models.profile import Profile
 from accounts.serializers.profile_serializer import ProfileSerializer, ProfileUpdateSerializer, UserSearchSerializer
@@ -41,7 +40,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = self.get_object()
         if instance.user != self.request.user:
-            return Response({'detail': 'Not authorized to update this profile.'}, status=status.HTTP_403_FORBIDDEN)
+            raise PermissionDenied('Not authorized')
         serializer.save()
 
 
