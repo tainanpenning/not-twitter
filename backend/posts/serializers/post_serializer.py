@@ -1,6 +1,33 @@
+import cloudinary.uploader
 from rest_framework import serializers
 
 from posts.models.post import Post
+
+
+def validate_media(value):
+    if not value:
+        return value
+
+    allowed_types = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'video/mp4',
+    ]
+    content_type = getattr(value, 'content_type', None)
+
+    if content_type not in allowed_types:
+        raise serializers.ValidationError(
+            "Unsupported file type. Allowed types are: JPEG, PNG, WEBP, GIF for images and MP4 for videos.",
+        )
+
+    if value.size > 25 * 1024 * 1024:  # 25MB limit
+        raise serializers.ValidationError(
+            "Media file size should not exceed 25MB.",
+        )
+
+    return value
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -28,33 +55,32 @@ class PostSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def create(self, validated_data):
+        media_file = validated_data.pop('media', None)
+
+        if media_file:
+            validate_media(media_file)
+
+            upload = cloudinary.uploader.upload(media_file, folder='not-twitter/files')
+
+            validated_data['media'] = upload['secure_url']
+
+        return super().create(validated_data)
+
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ['content', 'media']
 
-    def validate_media(self, value):
-        if not value:
-            return value
+    def update(self, instance, validated_data):
+        media_file = validated_data.pop('media', None)
 
-        allowed_types = [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-            'image/gif',
-            'video/mp4',
-        ]
-        content_type = getattr(value, 'content_type', None)
+        if media_file:
+            validate_media(media_file)
 
-        if content_type not in allowed_types:
-            raise serializers.ValidationError(
-                "Unsupported file type. Allowed types are: JPEG, PNG, WEBP, GIF for images and MP4 for videos.",
-            )
+            upload = cloudinary.uploader.upload(media_file, folder='not-twitter/files')
 
-        if value.size > 25 * 1024 * 1024:  # 25MB limit
-            raise serializers.ValidationError(
-                "Media file size should not exceed 25MB.",
-            )
+            validated_data['media'] = upload['secure_url']
 
-        return value
+        return super().update(instance, validated_data)

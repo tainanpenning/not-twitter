@@ -7,7 +7,7 @@ class Profile(models.Model):
     display_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
     birth_date = models.DateField(blank=True, null=True)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.URLField(default='', null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
