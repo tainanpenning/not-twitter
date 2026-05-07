@@ -1,25 +1,24 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+    )
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())],
+    )
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
-    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
         fields = ('username', 'email', 'password', 'password_confirm')
-
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email is already in use.")
-        return value
-
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Username is already in use.")
-        return value
 
     def validate(self, data):
         if data['password'] != data['password_confirm']:
@@ -37,13 +36,16 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        username = data.get('username')
-        password = data.get('password')
+        user = authenticate(
+            username=data.get("username"),
+            password=data.get("password"),
+        )
 
-        if username and password:
-            user = User.objects.filter(username=username).first()
-            if user and user.check_password(password):
-                data['user'] = user
-                return data
+        if not user:
             raise serializers.ValidationError("Invalid username or password.")
-        raise serializers.ValidationError("Both username and password are required.")
+
+        if not user.is_active:
+            raise serializers.ValidationError("User is inactive.")
+
+        data["user"] = user
+        return data

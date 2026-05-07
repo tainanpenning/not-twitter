@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
-    bio = models.TextField(blank=True)
+    bio = models.TextField(blank=True, max_length=500)
     birth_date = models.DateField(blank=True, null=True)
     avatar = models.URLField(default='', null=True)
     created_at = models.DateTimeField(auto_now_add=True)

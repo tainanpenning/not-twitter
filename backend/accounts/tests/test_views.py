@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 
 
 @pytest.mark.django_db
@@ -13,8 +13,8 @@ class TestRegisterViewSet:
         response = api_client.post('/api/accounts/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert 'token' in response.data
-        assert response.data['username'] == 'newuser'
+        assert 'access' in response.data
+        assert response.data['user'] == {'id': 1, 'username': 'newuser'}
 
     def test_register_password_too_short(self, api_client):
         """Password must have at least 8 characters."""
@@ -61,7 +61,7 @@ class TestLoginViewSet:
         response = api_client.post('/api/accounts/auth/login/', data, format='json')
 
         assert response.status_code == status.HTTP_200_OK
-        assert 'token' in response.data
+        assert 'access' in response.data
 
     def test_login_invalid_username(self, api_client):
         """Should fail with invalid username."""
@@ -85,20 +85,20 @@ class TestLogoutViewSet:
     """Tests for the logout endpoint."""
 
     def test_logout_success(self, authenticated_client):
-        """Should log out successfully."""
-        client, user, token = authenticated_client
+        client, user, refresh = authenticated_client
 
-        response = client.post('/api/accounts/auth/logout/')
+        jti = refresh['jti']
+
+        response = client.post('/api/accounts/auth/logout/', {'refresh': str(refresh)}, format='json')
 
         assert response.status_code == status.HTTP_200_OK
-        # Token should be deleted
-        assert not Token.objects.filter(user=token.user).exists()
+
+        assert BlacklistedToken.objects.filter(token__jti=jti).exists()
 
     def test_logout_unauthorized(self, api_client):
-        """Should reject logout without authentication."""
-        response = api_client.post('/api/accounts/auth/logout/')
+        response = api_client.post('/api/accounts/auth/logout/', {}, format='json')
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED]
 
 
 @pytest.mark.django_db

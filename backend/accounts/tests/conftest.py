@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APIClient
 
 from accounts.models.profile import Profile
@@ -31,12 +31,16 @@ def user_factory():
 
 
 @pytest.fixture
-def authenticated_client(api_client, user_factory):
-    """Client authenticated with a test user."""
-    user = user_factory()
-    token = Token.objects.create(user=user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
-    return api_client, user, token
+def authenticated_client(user_factory):
+    user = user_factory(
+        username='testuser',
+        password='testpass123',
+    )
+    refresh = RefreshToken.for_user(user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+
+    return client, user, refresh
 
 
 @pytest.fixture
