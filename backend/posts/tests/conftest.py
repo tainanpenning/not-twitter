@@ -1,13 +1,12 @@
 import pytest
+import uuid
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from posts.models.post import Post
 from posts.models.comment import Comment
 from posts.models.like import Like
-
-_user_counter = 0
 
 
 class UserFactory:
@@ -16,13 +15,12 @@ class UserFactory:
     @staticmethod
     def create(username=None, email=None, password='testpass123'):
         """Create a new User with unique username and email."""
-        global _user_counter
-        _user_counter += 1
+        unique = uuid.uuid4().hex[:8]
 
         if username is None:
-            username = f'testuser{_user_counter}'
+            username = f'testuser{unique}'
         if email is None:
-            email = f'test{_user_counter}@example.com'
+            email = f'test{unique}@example.com'
 
         return User.objects.create_user(
             username=username,
@@ -95,12 +93,13 @@ def user_factory():
 
 
 @pytest.fixture
-def authenticated_client(api_client, user_factory):
+def authenticated_client(user_factory):
     """Fixture for authenticated APIClient."""
     user = user_factory.create(username='authuser')
-    token = Token.objects.create(user=user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
-    return api_client, user, token
+    refresh = RefreshToken.for_user(user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
+    return client, user, refresh
 
 
 @pytest.fixture
@@ -130,16 +129,17 @@ def two_users():
 
 
 @pytest.fixture
-def two_authenticated_clients(api_client, two_users):
+def two_authenticated_clients(two_users):
     """Fixture for two authenticated clients."""
     user1, user2 = two_users
-    token1 = Token.objects.create(user=user1)
-    token2 = Token.objects.create(user=user2)
+
+    token1 = RefreshToken.for_user(user1)
+    token2 = RefreshToken.for_user(user2)
 
     client1 = APIClient()
-    client1.credentials(HTTP_AUTHORIZATION=f'Token {token1.key}')
+    client1.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token1.access_token)}')
 
     client2 = APIClient()
-    client2.credentials(HTTP_AUTHORIZATION=f'Token {token2.key}')
+    client2.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token2.access_token)}')
 
-    return (client1, user1, token1), (client2, user2, token2)
+    return ((client1, user1, token1), (client2, user2, token2))
