@@ -1,8 +1,11 @@
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from accounts.models.profile import Profile
 from accounts.serializers.profile_serializer import ProfileSerializer, ProfileUpdateSerializer, UserSearchSerializer
@@ -10,9 +13,22 @@ from accounts.permissions import IsOwnerOrReadOnly
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
-    serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    lookup_field = 'user__username'
+    lookup_field = 'username'
+
+    @action(detail=False, methods=["get", "patch"], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+
+        if request.method == "GET":
+            serializer = self.get_serializer(profile)
+            return Response(serializer.data)
+
+        if request.method == "PATCH":
+            serializer = self.get_serializer(profile, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
     def get_queryset(self):
         return (
@@ -33,9 +49,13 @@ class ProfileViewSet(viewsets.ModelViewSet):
         return ProfileSerializer
 
     def get_object(self):
-        if self.kwargs.get('user__username') == 'me':
-            self.kwargs['user__username'] = self.request.user.username
-        return super().get_object()
+        username = self.kwargs.get(self.lookup_field)
+        if username == 'me':
+            username = self.request.user.username
+        return get_object_or_404(
+            self.get_queryset(),
+            user__username=username,
+        )
 
     def perform_update(self, serializer):
         instance = self.get_object()

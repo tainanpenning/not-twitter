@@ -9,6 +9,7 @@ from rest_framework import status
 
 from accounts.models.follow import Follow
 from accounts.serializers.profile_serializer import UserSearchSerializer
+from accounts.utils.mixins import MeUserMixin
 
 
 class FollowPagination(PageNumberPagination):
@@ -17,7 +18,7 @@ class FollowPagination(PageNumberPagination):
     max_page_size = 100
 
 
-class FollowViewSet(viewsets.ViewSet):
+class FollowViewSet(MeUserMixin, viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = FollowPagination
     throttle_scope = "follow"
@@ -25,12 +26,17 @@ class FollowViewSet(viewsets.ViewSet):
     def _paginate(self, queryset, request):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
+
+        if page is not None:
+            serializer = UserSearchSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
         serializer = UserSearchSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['post'], url_path='toggle/(?P<username>[^/.]+)')
     def toggle(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
+        target_user = self.get_user_from_param(request, username)
 
         if request.user == target_user:
             return Response(
@@ -56,20 +62,23 @@ class FollowViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'], url_path='followers/(?P<username>[^/.]+)')
     def followers_list(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
+        target_user = self.get_user_from_param(request, username)
+
         follower_users = (
             User.objects.filter(
                 following__following=target_user,
             )
             .select_related('profile')
-            .order_by('username'),
+            .order_by('username')
         )
         return self._paginate(follower_users, request)
 
     @action(detail=False, methods=['get'], url_path='following/(?P<username>[^/.]+)')
     def following_list(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
+        target_user = self.get_user_from_param(request, username)
+
         following_users = (
+            Follow.objects.filter(follower=target_user).select_related('following'),
             User.objects.filter(
                 followers__follower=target_user,
             )
