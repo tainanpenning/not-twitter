@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 
 import { login } from "../store/slices/authSlice";
+import { getBackendErrorMessage } from "../utils/extractErrorData";
 
 import type { AppDispatch } from "../store";
 
@@ -36,11 +37,10 @@ export function LoginPage() {
       } else {
         setError("Invalid credentials");
       }
-    } catch (error: any) {
-      const backendErrors = error.response?.data;
+    } catch (error: unknown) {
+      const message = getBackendErrorMessage(error);
 
-      if (backendErrors) {
-        const message = Object.values(backendErrors).flat().join(" ");
+      if (message) {
         setError(message);
       } else {
         setError("Unexpected error");

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 import { authService } from "../../services/authService";
+import { getBackendErrorMessage } from "../../utils/extractErrorData";
 
 interface User {
   id: number;
@@ -38,9 +39,9 @@ export const login = createAsyncThunk(
         credentials.identifier,
         credentials.password,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.detail || "Login failed",
+        getBackendErrorMessage(error) ?? "Login failed",
       );
     }
   },

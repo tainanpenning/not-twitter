@@ -31,6 +31,7 @@ export function FollowPage() {
   }, [normalizedUsername, isFollowers]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers();
   }, [loadUsers]);
 

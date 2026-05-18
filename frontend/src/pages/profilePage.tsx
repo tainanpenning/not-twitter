@@ -53,6 +53,7 @@ export function ProfilePage() {
   }, [currentUser, normalizedUsername]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfile();
   }, [loadProfile]);
 
