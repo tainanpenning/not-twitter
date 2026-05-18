@@ -31,6 +31,7 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
+          poetry lock --no-update
           poetry install --with dev --no-interaction
 
       - name: Run tests
