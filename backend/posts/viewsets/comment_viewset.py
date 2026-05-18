@@ -1,35 +1,75 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+
+from rest_framework import generics
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 from posts.models.comment import Comment
+from posts.models.post import Post
+
 from posts.serializers.comment_serializer import CommentSerializer
+
 from posts.permissions import IsCommentAuthorOrPostAuthor
 
+from posts.pagination import CommentPagination
 
-class CommentViewSet(viewsets.ModelViewSet):
+
+class CommentListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
-    permission_classes = [IsCommentAuthorOrPostAuthor]
+    permission_classes = [IsAuthenticated]
+    pagination_class = CommentPagination
 
     def get_queryset(self):
-        queryset = Comment.objects.filter(
-            is_active=True,
-        ).select_related('author', 'author__profile')
-        post_id = self.request.query_params.get('post_id')
-        if post_id:
-            queryset = queryset.filter(post_id=post_id)
-        return queryset
+        post_id = self.kwargs.get("post_id")
+
+        return (
+            Comment.objects.filter(
+                post_id=post_id,
+                is_active=True,
+            )
+            .select_related(
+                'author',
+                'author__profile',
+            )
+            .order_by('-created_at')
+        )
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        post_id = self.kwargs.get("post_id")
+
+        post = get_object_or_404(
+            Post,
+            pk=post_id,
+        )
+
+        serializer.save(
+            author=self.request.user,
+            post=post,
+        )
+
+
+class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated, IsCommentAuthorOrPostAuthor]
+
+    queryset = Comment.objects.select_related(
+        'author',
+        'author__profile',
+    )
 
     def perform_update(self, serializer):
-        instance = self.get_object()
-        if instance.author != self.request.user:
-            return Response({'detail': 'Not authorized to update this comment.'}, status=status.HTTP_403_FORBIDDEN)
+        comment = self.get_object()
+
+        if comment.author != self.request.user:
+            raise PermissionDenied(("Not authorized " "to update this comment."))
+
         serializer.save()
 
     def perform_destroy(self, instance):
-        post_author = instance.post.author
-        if instance.author != self.request.user and post_author != self.request.user:
-            return Response({'detail': 'Not authorized to delete this comment.'}, status=status.HTTP_403_FORBIDDEN)
+        is_comment_author = instance.author == self.request.user
+        is_post_author = instance.post.author == self.request.user
+
+        if not (is_comment_author or is_post_author):
+            raise PermissionDenied(("Not authorized " "to delete this comment."))
+
         instance.delete()
