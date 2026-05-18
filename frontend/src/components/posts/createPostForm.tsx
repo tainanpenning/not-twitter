@@ -16,6 +16,7 @@ export function CreatePostForm({ onPostCreated }: Props) {
 
   useEffect(() => {
     if (!media) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreview(null);
       return;
     }

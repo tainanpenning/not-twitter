@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { Profile } from "../../types";
 
 import { profileService } from "../../services/profileService";
+import { getBackendErrorMessage } from "../../utils/extractErrorData";
 
 interface Props {
   profile: Profile;
@@ -47,11 +48,10 @@ export function SecurityEditForm({ profile }: Props) {
       setSuccess("Credentials updated");
 
       navigate(`/profile/@${profile.username}`);
-    } catch (error: any) {
-      const backendErrors = error.response?.data;
+    } catch (error: unknown) {
+      const message = getBackendErrorMessage(error);
 
-      if (backendErrors) {
-        const message = Object.values(backendErrors).flat().join(" ");
+      if (message) {
         setError(message);
       } else {
         setError("Unexpected error");

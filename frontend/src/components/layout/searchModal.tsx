@@ -33,6 +33,7 @@ export function SearchModal({ close, position }: Props) {
   }, [search]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSearch();
   }, [loadSearch]);
 

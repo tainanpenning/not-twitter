@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 import { authService } from "../services/authService";
+import { getBackendErrorMessage } from "../utils/extractErrorData";
 import { validateBirthDate } from "../utils/validateBirthDate";
 
 export function RegisterPage() {
@@ -33,11 +34,10 @@ export function RegisterPage() {
 
       setSuccess("Register Successful");
       navigate("/login");
-    } catch (error: any) {
-      const backendErrors = error.response?.data;
+    } catch (error: unknown) {
+      const message = getBackendErrorMessage(error);
 
-      if (backendErrors) {
-        const message = Object.values(backendErrors).flat().join(" ");
+      if (message) {
         setError(message);
       } else {
         setError("Unexpected error");
