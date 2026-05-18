@@ -19,7 +19,7 @@ class TestPostViewSet:
         post2 = PostFactory.create()
 
         client = APIClient()
-        response = client.get('/api/posts/posts/')
+        response = client.get('/api/posts/')
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['count'] == 2
@@ -33,7 +33,7 @@ class TestPostViewSet:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
         data = {'content': 'New post'}
-        response = client.post('/api/posts/posts/', data)
+        response = client.post('/api/posts/', data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert Post.objects.count() == 1
@@ -43,7 +43,7 @@ class TestPostViewSet:
         """Test creating a post when unauthenticated."""
         data = {'content': 'New post'}
         client = APIClient()
-        response = client.post('/api/posts/posts/', data)
+        response = client.post('/api/posts/', data)
         # IsAuthenticatedOrReadOnly returns 401 when posting as unauthenticated
         assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_401_UNAUTHORIZED]
 
@@ -52,7 +52,7 @@ class TestPostViewSet:
         post = PostFactory.create(content='Test content')
 
         client = APIClient()
-        response = client.get(f'/api/posts/posts/{post.id}/')
+        response = client.get(f'/api/posts/{post.id}/')
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['content'] == 'Test content'
@@ -67,7 +67,7 @@ class TestPostViewSet:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
         data = {'content': 'Updated content'}
-        response = client.patch(f'/api/posts/posts/{post.id}/', data)
+        response = client.patch(f'/api/posts/{post.id}/', data)
 
         assert response.status_code == status.HTTP_200_OK
         post.refresh_from_db()
@@ -84,7 +84,7 @@ class TestPostViewSet:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
         data = {'content': 'Hacked'}
-        response = client.patch(f'/api/posts/posts/{post.id}/', data)
+        response = client.patch(f'/api/posts/{post.id}/', data)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_delete_post_as_author(self):
@@ -96,7 +96,7 @@ class TestPostViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
 
-        response = client.delete(f'/api/posts/posts/{post.id}/')
+        response = client.delete(f'/api/posts/{post.id}/')
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         post.refresh_from_db()
@@ -110,7 +110,7 @@ class TestPostViewSet:
         CommentFactory.create(post=post)
 
         client = APIClient()
-        response = client.get(f'/api/posts/posts/{post.id}/')
+        response = client.get(f'/api/posts/{post.id}/')
 
         assert response.status_code == status.HTTP_200_OK
         # Check that likes were created
@@ -129,7 +129,7 @@ class TestCommentViewSet:
         CommentFactory.create(post=post)
 
         client = APIClient()
-        response = client.get(f'/api/posts/comments/?post_id={post.id}')
+        response = client.get(f'/api/posts/{post.id}/comments/')
 
         assert response.status_code == status.HTTP_200_OK
         # Response might be paginated
@@ -148,7 +148,7 @@ class TestCommentViewSet:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(refresh.access_token)}')
 
         data = {'post': post.id, 'content': 'Great post!'}
-        response = client.post('/api/posts/comments/', data)
+        response = client.post(f'/api/posts/{post.id}/comments/', data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert Comment.objects.count() == 1
@@ -160,7 +160,7 @@ class TestCommentViewSet:
         data = {'post': post.id, 'content': 'Nice!'}
 
         client = APIClient()
-        response = client.post('/api/posts/comments/', data)
+        response = client.post(f'/api/posts/{post.id}/comments/', data)
         # IsAuthenticated returns 401 when posting as unauthenticated
         assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_401_UNAUTHORIZED]
 
@@ -209,10 +209,10 @@ class TestLikeViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
-        response = client.post(f'/api/posts/likes/toggle/{post.id}/')
+        response = client.post(f'/api/posts/{post.id}/like/')
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data['status'] == True
+        assert response.data['liked'] == True
         assert Like.objects.filter(post=post, user=user).exists()
 
     def test_toggle_like_delete(self):
@@ -225,17 +225,17 @@ class TestLikeViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
-        response = client.post(f'/api/posts/likes/toggle/{post.id}/')
+        response = client.delete(f'/api/posts/{post.id}/like/')
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['status'] == 'unliked'
+        assert response.data['liked'] == False
         assert not Like.objects.filter(post=post, user=user).exists()
 
     def test_toggle_like_unauthenticated(self):
         """Test toggling a like when unauthenticated."""
         post = PostFactory.create()
         client = APIClient()
-        response = client.post(f'/api/posts/likes/toggle/{post.id}/')
+        response = client.post(f'/api/posts/{post.id}/like/')
         # IsAuthenticated returns 401 or 403 when posting as unauthenticated
         assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_401_UNAUTHORIZED]
 
@@ -247,6 +247,6 @@ class TestLikeViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
-        response = client.post('/api/posts/likes/toggle/999/')
+        response = client.post('/api/posts/999/like/')
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

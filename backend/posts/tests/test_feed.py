@@ -30,7 +30,7 @@ class TestFeedViewSet:
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
         # Get feed
-        response = client.get('/api/posts/feed/')
+        response = client.get('/api/feed/')
         assert response.status_code == status.HTTP_200_OK
 
         # Should only see post1 (from followed author)
@@ -49,7 +49,7 @@ class TestFeedViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
-        response = client.get('/api/posts/feed/')
+        response = client.get('/api/feed/')
         assert response.status_code == status.HTTP_200_OK
         # Own posts should not appear in feed (follow relationships required)
         post_ids = [p['id'] for p in response.data['results']]
@@ -58,7 +58,7 @@ class TestFeedViewSet:
     def test_feed_unauthenticated(self):
         """Test feed requires authentication."""
         client = APIClient()
-        response = client.get('/api/posts/feed/')
+        response = client.get('/api/feed/')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_feed_pagination(self):
@@ -75,7 +75,7 @@ class TestFeedViewSet:
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f'Bearer {str(token.access_token)}')
 
-        response = client.get('/api/posts/feed/')
+        response = client.get('/api/feed/')
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data['results']) == 20  # First page with 20 items
+        assert len(response.data['results']) == 15  # First page with 15 items
         assert response.data['next'] is not None  # Should have next page

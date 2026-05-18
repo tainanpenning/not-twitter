@@ -2,10 +2,11 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
 
 from posts.models.comment import Comment
 from posts.models.post import Post
+
+from accounts.permissions import IsAuthenticatedOrReadOnly
 
 from posts.serializers.comment_serializer import CommentSerializer
 
@@ -16,7 +17,7 @@ from posts.pagination import CommentPagination
 
 class CommentListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = CommentPagination
 
     def get_queryset(self):
@@ -50,7 +51,7 @@ class CommentListCreateAPIView(generics.ListCreateAPIView):
 
 class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated, IsCommentAuthorOrPostAuthor]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsCommentAuthorOrPostAuthor]
 
     queryset = Comment.objects.select_related(
         'author',

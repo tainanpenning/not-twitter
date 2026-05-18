@@ -1,16 +1,17 @@
 from django.shortcuts import get_object_or_404
 
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from accounts.permissions import IsAuthenticatedOrReadOnly
 
 from posts.models.like import Like
 from posts.models.post import Post
 
 
 class LikeAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, post_id):
         post = get_object_or_404(
