@@ -18,7 +18,7 @@ def api_client():
 def user_factory():
     """Factory to create users for testing."""
 
-    def create_user(username=None, email=None, password='testpass123'):
+    def create_user(username=None, email=None, password='sp574839'):
         if not username:
             username = f'user_{uuid.uuid4().hex[:8]}'
         if not email:
@@ -34,7 +34,7 @@ def user_factory():
 def authenticated_client(user_factory):
     user = user_factory(
         username='testuser',
-        password='testpass123',
+        password='ps574839',
     )
     refresh = RefreshToken.for_user(user)
     client = APIClient()

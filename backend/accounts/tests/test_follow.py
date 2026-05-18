@@ -11,7 +11,7 @@ class TestFollowViewSet:
         client, user, token = authenticated_client
         target_user = user_factory(username='target')
 
-        response = client.post(f'/api/accounts/follow/toggle/{target_user.username}/', format='json')
+        response = client.post(f'/api/profiles/{target_user.username}/follow/', format='json')
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['detail'] == 'Followed successfully.'
@@ -22,7 +22,7 @@ class TestFollowViewSet:
         target_user = user_factory(username='target')
         follow_factory(follower=user, following=target_user)
 
-        response = client.post(f'/api/accounts/follow/toggle/{target_user.username}/', format='json')
+        response = client.post(f'/api/profiles/{target_user.username}/follow/', format='json')
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['detail'] == 'Unfollowed successfully.'
@@ -31,7 +31,7 @@ class TestFollowViewSet:
         """Should not allow following oneself."""
         client, user, token = authenticated_client
 
-        response = client.post(f'/api/accounts/follow/toggle/{user.username}/', format='json')
+        response = client.post(f'/api/profiles/{user.username}/follow/', format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert 'cannot follow yourself' in response.data['detail'].lower()
@@ -42,7 +42,7 @@ class TestFollowViewSet:
         follower = user_factory(username='follower')
         follow_factory(follower=follower, following=user)
 
-        response = client.get(f'/api/accounts/follow/followers/{user.username}/')
+        response = client.get(f'/api/profiles/{user.username}/followers/')
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) > 0
@@ -53,7 +53,7 @@ class TestFollowViewSet:
         following = user_factory(username='following')
         follow_factory(follower=user, following=following)
 
-        response = client.get(f'/api/accounts/follow/following/{user.username}/')
+        response = client.get(f'/api/profiles/{user.username}/following/')
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) > 0
@@ -62,6 +62,6 @@ class TestFollowViewSet:
         """Should reject follow without authentication."""
         target_user = user_factory(username='target')
 
-        response = api_client.post(f'/api/accounts/follow/toggle/{target_user.username}/', format='json')
+        response = api_client.post(f'/api/profiles/{target_user.username}/follow/', format='json')
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
