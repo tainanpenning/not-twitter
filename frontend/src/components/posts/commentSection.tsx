@@ -126,12 +126,12 @@ export function CommentSection({
                 <div className="flex gap-2">
                   {isCurrentProfile ? (
                     <h3 className="font-semibold text-white">
-                      {comment.author_display_name}
+                      {comment.author_display_name || comment.author_username}
                     </h3>
                   ) : (
                     <Link to={profilePath}>
                       <h3 className="font-semibold text-white">
-                        {comment.author_display_name}
+                        {comment.author_display_name || comment.author_username}
                       </h3>
                     </Link>
                   )}
