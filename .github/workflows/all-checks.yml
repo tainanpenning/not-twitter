@@ -1,0 +1,12 @@
+name: All Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-check:
+    uses: ./.github/workflows/backend.yml
+
+  frontend-check:
+    uses: ./.github/workflows/frontend.yml
