@@ -1,56 +1,105 @@
-from rest_framework.authtoken.models import Token
-
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from accounts.serializers.auth_serializer import RegisterSerializer, LoginSerializer
+from accounts.services.token_service import AuthService
 
 
-class RegisterViewSet(viewsets.ViewSet):
-    serializer_class = RegisterSerializer
+class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "auth_register"
 
-    def create(self, request):
+    def post(self, request):
         serializer = RegisterSerializer(data=request.data)
+
         serializer.is_valid(raise_exception=True)
+
         user = serializer.save()
-        token, _ = Token.objects.get_or_create(user=user)
+
         return Response(
-            {"token": token.key, "user_id": user.id, "username": user.username},
+            AuthService.build_auth_response(user),
             status=status.HTTP_201_CREATED,
         )
 
 
-class LoginViewSet(viewsets.ViewSet):
-    serializer_class = LoginSerializer
+class LoginAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "auth_login"
 
-    def create(self, request):
+    def post(self, request):
         serializer = LoginSerializer(data=request.data)
+
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, _ = Token.objects.get_or_create(user=user)
+
+        user = serializer.validated_data["user"]
+
         return Response(
-            {"token": token.key, "user_id": user.id, "username": user.username},
+            AuthService.build_auth_response(user),
             status=status.HTTP_200_OK,
         )
 
 
-class LogoutViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
-    throttle_scope = "auth_logout"
+class RefreshAPIView(APIView):
+    permission_classes = [AllowAny]
 
-    @action(detail=False, methods=['post'], url_path='logout')
-    def logout(self, request):
+    def post(self, request):
+        refresh = request.data.get("refresh")
+
+        if not refresh:
+            return Response(
+                {"detail": "Refresh token is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
-            request.user.auth_token.delete()
+            refresh_token = RefreshToken(refresh)
+
+            access = str(refresh_token.access_token)
+
+            return Response(
+                {
+                    "access": access,
+                    "refresh": refresh,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except (
+            InvalidToken,
+            TokenError,
+        ):
+            return Response(
+                {"detail": "Invalid refresh token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+
+class LogoutAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = RefreshToken(refresh_token)
+
+            token.blacklist()
+
         except Exception:
             pass
+
         return Response(
-            {"detail": "Successfully logged out."},
+            {"detail": "Logged out"},
             status=status.HTTP_200_OK,
         )

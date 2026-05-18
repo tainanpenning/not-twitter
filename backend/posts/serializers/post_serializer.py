@@ -1,18 +1,46 @@
+import cloudinary.uploader
+
 from rest_framework import serializers
 
 from posts.models.post import Post
 
 
+def validate_media(value):
+    if not value:
+        return value
+
+    allowed_types = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'video/mp4',
+    ]
+
+    content_type = getattr(value, 'content_type', None)
+
+    if content_type not in allowed_types:
+        raise serializers.ValidationError(('Unsupported file type. ' 'Allowed: JPEG, PNG, WEBP, GIF, MP4.'))
+
+    max_size = 25 * 1024 * 1024
+
+    if value.size > max_size:
+        raise serializers.ValidationError(('Media file size ' 'should not exceed 25MB.'))
+
+    return value
+
+
 class PostSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source='author.username', read_only=True)
-    author_display_name = serializers.CharField(source='author.profile.display_name', read_only=True)
-    author_avatar = serializers.ImageField(source='author.profile.avatar', read_only=True, allow_null=True)
-    likes_count = serializers.IntegerField(source='_likes_count', read_only=True, default=0)
-    comments_count = serializers.IntegerField(source='_comments_count', read_only=True, default=0)
-    is_liked = serializers.BooleanField(source='_is_liked', read_only=True, default=False)
+    author_display_name = serializers.SerializerMethodField()
+    author_avatar = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
+
         fields = [
             'id',
             'author_username',
@@ -26,35 +54,72 @@ class PostSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_author_display_name(self, obj):
+        profile = getattr(obj.author, 'profile', None)
+
+        if not profile:
+            return None
+
+        return profile.display_name
+
+    def get_author_avatar(self, obj):
+        profile = getattr(obj.author, 'profile', None)
+
+        if not profile:
+            return None
+
+        return profile.avatar
+
+    def get_likes_count(self, obj):
+        return getattr(obj, '_likes_count', 0)
+
+    def get_comments_count(self, obj):
+        return getattr(obj, '_comments_count', 0)
+
+    def get_is_liked(self, obj):
+        return getattr(obj, '_is_liked', False)
 
 
-class PostCreateUpdateSerializer(serializers.ModelSerializer):
+class PostWriteSerializer(serializers.ModelSerializer):
+    media = serializers.FileField(
+        required=False,
+        allow_null=True,
+        validators=[validate_media],
+    )
+
     class Meta:
         model = Post
+
         fields = ['content', 'media']
 
-    def validate_media(self, value):
-        if not value:
-            return value
+    def _upload_media(self, validated_data):
+        media_file = validated_data.pop('media', None)
 
-        allowed_types = [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-            'image/gif',
-            'video/mp4',
-        ]
-        content_type = getattr(value, 'content_type', None)
+        if not media_file:
+            return validated_data
 
-        if content_type not in allowed_types:
-            raise serializers.ValidationError(
-                "Unsupported file type. Allowed types are: JPEG, PNG, WEBP, GIF for images and MP4 for videos.",
-            )
+        upload = cloudinary.uploader.upload(
+            media_file,
+            folder='not-twitter/files',
+        )
 
-        if value.size > 25 * 1024 * 1024:  # 25MB limit
-            raise serializers.ValidationError(
-                "Media file size should not exceed 25MB.",
-            )
+        validated_data['media'] = upload['secure_url']
 
-        return value
+        return validated_data
+
+    def create(self, validated_data):
+        validated_data = self._upload_media(validated_data)
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        validated_data = self._upload_media(validated_data)
+
+        return super().update(instance, validated_data)

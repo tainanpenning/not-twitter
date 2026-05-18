@@ -1,79 +1,114 @@
-from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework import generics
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from accounts.models.profile import Profile
 from accounts.models.follow import Follow
 from accounts.serializers.profile_serializer import UserSearchSerializer
+from accounts.utils.mixins import MeUserMixin
+from accounts.pagination import FollowPagination
 
 
-class FollowPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
-class FollowViewSet(viewsets.ViewSet):
+class BaseFollowAPIView(MeUserMixin):
     permission_classes = [IsAuthenticated]
-    pagination_class = FollowPagination
     throttle_scope = "follow"
 
-    def _paginate(self, queryset, request):
-        paginator = self.pagination_class()
+    def paginate_users(self, queryset, request):
+        paginator = FollowPagination()
+
         page = paginator.paginate_queryset(queryset, request)
+
         serializer = UserSearchSerializer(page, many=True)
+
         return paginator.get_paginated_response(serializer.data)
 
-    @action(detail=False, methods=['post'], url_path='toggle/(?P<username>[^/.]+)')
-    def toggle(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
+
+class FollowAPIView(BaseFollowAPIView, APIView):
+    def post(self, request, username):
+        target_user = self.get_user_from_param(request, username)
 
         if request.user == target_user:
             return Response(
-                {'detail': "You cannot follow yourself."},
+                {"detail": "You cannot follow yourself."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        follow, created = Follow.objects.get_or_create(
+        follow_exists = Follow.objects.filter(
+            follower=request.user,
+            following=target_user,
+        ).exists()
+
+        if follow_exists:
+            Follow.objects.filter(
+                follower=request.user,
+                following=target_user,
+            ).delete()
+
+            return Response(
+                {"detail": "Unfollowed successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        Follow.objects.create(
             follower=request.user,
             following=target_user,
         )
 
-        if not created:
-            follow.delete()
-            return Response(
-                {'detail': 'Unfollowed successfully.'},
-                status=status.HTTP_200_OK,
-            )
         return Response(
-            {'detail': 'Followed successfully.'},
+            {"detail": "Followed successfully."},
             status=status.HTTP_201_CREATED,
         )
 
-    @action(detail=False, methods=['get'], url_path='followers/(?P<username>[^/.]+)')
-    def followers_list(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
-        follower_users = (
-            User.objects.filter(
-                following__following=target_user,
-            )
-            .select_related('profile')
-            .order_by('username'),
-        )
-        return self._paginate(follower_users, request)
 
-    @action(detail=False, methods=['get'], url_path='following/(?P<username>[^/.]+)')
-    def following_list(self, request, username=None, **kwargs):
-        target_user = get_object_or_404(User, username=username)
-        following_users = (
-            User.objects.filter(
-                followers__follower=target_user,
-            )
-            .select_related('profile')
-            .order_by('username'),
+class FollowersAPIView(BaseFollowAPIView, generics.ListAPIView):
+    serializer_class = UserSearchSerializer
+
+    def get_queryset(self):
+        username = self.kwargs.get("username")
+
+        target_user = self.get_user_from_param(
+            self.request,
+            username,
         )
-        return self._paginate(following_users, request)
+
+        return (
+            Profile.objects.filter(
+                user__following__following=target_user,
+            )
+            .select_related('user')
+            .order_by('user__username')
+        )
+
+    def list(self, request, *args, **kwargs):
+        return self.paginate_users(
+            self.get_queryset(),
+            request,
+        )
+
+
+class FollowingAPIView(BaseFollowAPIView, generics.ListAPIView):
+    serializer_class = UserSearchSerializer
+
+    def get_queryset(self):
+        username = self.kwargs.get("username")
+
+        target_user = self.get_user_from_param(
+            self.request,
+            username,
+        )
+
+        return (
+            Profile.objects.filter(
+                user__followers__follower=target_user,
+            )
+            .select_related('user')
+            .order_by('user__username')
+        )
+
+    def list(self, request, *args, **kwargs):
+        return self.paginate_users(
+            self.get_queryset(),
+            request,
+        )
