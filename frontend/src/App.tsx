@@ -1,9 +1,26 @@
-function App() {
-  return (
-    <>
-      <h1>Welcome to the App!</h1>
-    </>
-  );
-}
+import { useDispatch } from "react-redux";
+import { AppRoutes } from "./routes/appRoutes";
+import { useEffect } from "react";
+import { store, type AppDispatch } from "./store";
+import { loadUser, logout } from "./store/slices/authSlice";
+import { tokenService } from "./services/apiClient";
 
-export default App;
+window.addEventListener("auth-expired", () => {
+  store.dispatch(logout());
+});
+
+export default function App() {
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    const token = tokenService.getAccessToken();
+
+    if (token) {
+      dispatch(loadUser());
+    } else {
+      dispatch(logout());
+    }
+  }, [dispatch]);
+
+  return <AppRoutes />;
+}
