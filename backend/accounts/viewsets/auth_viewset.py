@@ -1,76 +1,64 @@
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-
 from accounts.serializers.auth_serializer import RegisterSerializer, LoginSerializer
+from accounts.services.token_service import AuthService
 
 
-class RegisterViewSet(viewsets.ViewSet):
-    serializer_class = RegisterSerializer
+class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "auth_register"
 
-    def create(self, request):
+    def post(self, request):
         serializer = RegisterSerializer(data=request.data)
+
         serializer.is_valid(raise_exception=True)
 
         user = serializer.save()
 
-        refresh = RefreshToken.for_user(user)
-
         return Response(
-            {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                },
-            },
+            AuthService.build_auth_response(user),
             status=status.HTTP_201_CREATED,
         )
 
 
-class LoginViewSet(viewsets.ViewSet):
-    serializer_class = LoginSerializer
+class LoginAPIView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "auth_login"
 
-    def create(self, request):
+    def post(self, request):
         serializer = LoginSerializer(data=request.data)
+
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.validated_data['user']
-
-        refresh = RefreshToken.for_user(user)
+        user = serializer.validated_data["user"]
 
         return Response(
-            {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                },
-            },
+            AuthService.build_auth_response(user),
             status=status.HTTP_200_OK,
         )
 
 
-class TokenRefreshViewSet(viewsets.ViewSet):
+class RefreshAPIView(APIView):
     permission_classes = [AllowAny]
 
-    def create(self, request):
+    def post(self, request):
         refresh = request.data.get("refresh")
 
         if not refresh:
-            return Response({"detail": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Refresh token is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             refresh_token = RefreshToken(refresh)
+
             access = str(refresh_token.access_token)
 
             return Response(
@@ -80,20 +68,38 @@ class TokenRefreshViewSet(viewsets.ViewSet):
                 },
                 status=status.HTTP_200_OK,
             )
-        except (InvalidToken, TokenError):
-            return Response({"detail": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except (
+            InvalidToken,
+            TokenError,
+        ):
+            return Response(
+                {"detail": "Invalid refresh token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
 
-class LogoutViewSet(viewsets.ViewSet):
+class LogoutAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def create(self, request):
+    def post(self, request):
         refresh_token = request.data.get("refresh")
+
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             token = RefreshToken(refresh_token)
+
             token.blacklist()
+
         except Exception:
             pass
 
-        return Response({"detail": "Logged out"}, status=200)
+        return Response(
+            {"detail": "Logged out"},
+            status=status.HTTP_200_OK,
+        )

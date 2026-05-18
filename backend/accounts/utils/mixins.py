@@ -1,5 +1,22 @@
+from django.db.models import Count
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
+
+from accounts.models.profile import Profile
+
+
+class BaseProfileQuerysetMixin:
+    def get_queryset(self):
+        return Profile.objects.select_related('user').annotate(
+            _followers_count=Count(
+                'user__followers',
+                distinct=True,
+            ),
+            _following_count=Count(
+                'user__following',
+                distinct=True,
+            ),
+        )
 
 
 class MeUserMixin:

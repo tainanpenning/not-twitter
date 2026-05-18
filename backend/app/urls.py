@@ -16,15 +16,21 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+
+from django.urls import include, path
+
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api-auth/', include('rest_framework.urls')),
-    path('api/accounts/', include('accounts.urls')),
-    path('api/posts/', include('posts.urls')),
+    path('api/auth/', include('accounts.urls.auth_urls')),
+    path('api/profiles/', include('accounts.urls.profile_urls')),
+    path('api/profiles/', include('accounts.urls.follow_urls')),
+    path('api/posts/', include('posts.urls.post_urls')),
+    path('api/posts/', include('posts.urls.comment_urls')),
+    path('api/posts/', include('posts.urls.like_urls')),
+    path('api/feed/', include('posts.urls.feed_urls')),
 ]
 
 # Serve media files in development

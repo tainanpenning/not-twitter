@@ -1,40 +1,31 @@
-from rest_framework import permissions
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
-class IsAuthorOrReadOnly(permissions.BasePermission):
-    """
-    Custom permission to allow only the author of an object to edit it.
-    """
-
+class IsAuthorOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return True
 
-        # Write permissions are only allowed to the author
         return obj.author == request.user
 
 
-class IsCommentAuthorOrPostAuthor(permissions.BasePermission):
-    """
-    Custom permission for comments:
-    - Allows author to edit/delete their comment
-    - Allows post author to delete comments on their post
-    - Allows anyone to read
-    """
+class IsPostAuthorOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
 
+        return obj.author == request.user
+
+
+class IsCommentAuthorOrPostAuthor(BasePermission):
     def has_permission(self, request, view):
-        # Only authenticated users can create comments
         if request.method == 'POST':
             return request.user and request.user.is_authenticated
-        # Read-only operations are allowed for anyone
         return True
 
     def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed to any request
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return True
 
-        # Edit/delete allowed for comment author or post author
         post_author = obj.post.author
         return obj.author == request.user or post_author == request.user

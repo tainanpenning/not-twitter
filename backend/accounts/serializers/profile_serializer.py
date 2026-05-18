@@ -8,6 +8,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from accounts.models.profile import Profile
+from accounts.models.follow import Follow
 
 ALLOWED_IMAGE_TYPES = [
     'image/jpeg',
@@ -60,7 +61,7 @@ def upload_avatar(image_file):
         folder='not-twitter/files',
     )
 
-    return upload['public_id']
+    return upload['secure_url']
 
 
 def delete_avatar(public_id):
@@ -74,7 +75,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     followers_count = serializers.IntegerField(source='_followers_count', read_only=True)
     following_count = serializers.IntegerField(source='_following_count', read_only=True)
-    is_following = serializers.BooleanField(read_only=True)
+    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -104,11 +105,23 @@ class ProfileSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
 
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+
+        if not request or request.user.is_anonymous:
+            return False
+
+        return Follow.objects.filter(
+            follower=request.user,
+            following=obj.user,
+        ).exists()
+
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', required=False)
     password = serializers.CharField(write_only=True, required=False, min_length=8)
-    avatar = serializers.ImageField(required=False)
+    password_confirm = serializers.CharField(write_only=True, required=False, min_length=8)
+    avatar = serializers.ImageField(required=False, write_only=True)
 
     class Meta:
         model = Profile
@@ -119,36 +132,44 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'birth_date',
             'email',
             'password',
+            'password_confirm',
             'avatar',
         ]
 
-    def validate_display_name(self, value):
-        if not value:
-            return value
+    def validate_display_name(self, data):
+        if not data:
+            return data
 
-        value = value.strip()
+        data = data.strip()
 
-        if not value:
+        if not data:
             raise serializers.ValidationError('Display name cannot be empty.')
 
-        if len(value) > 100:
-            raise serializers.ValidationError('Display name cannot exceed 100 characters.')
+        if len(data) > 30:
+            raise serializers.ValidationError('Display name cannot exceed 30 characters.')
 
-        return value
+        return data
 
-    def validate_password(self, value):
-        if value:
-            validate_password(
-                value,
-                self.instance.user if self.instance else None,
-            )
+    def validate(self, data):
+        password = data.get('password')
+        password_confirm = data.get('password_confirm')
 
-        return value
+        if password and not password_confirm:
+            raise serializers.ValidationError({'password_confirm': 'Confirmation required'})
+
+        if password and password != password_confirm:
+            raise serializers.ValidationError({'password_confirm': 'Passwords do not match'})
+
+        if password:
+            validate_password(password, self.instance.user if self.instance else None)
+
+        return data
 
     @transaction.atomic
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
         password = validated_data.pop('password', None)
+        validated_data.pop('password_confirm', None)
         image_file = validated_data.pop('avatar', None)
         email = user_data.get('email')
 
@@ -160,7 +181,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
         instance.user.save()
 
-        if image_file:
+        if image_file is not None:
             old_avatar = instance.avatar
 
             new_avatar = upload_avatar(image_file)
