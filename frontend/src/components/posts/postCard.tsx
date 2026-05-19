@@ -21,6 +21,9 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
   const profilePath = `/profile/@${post.author_username}`;
   const isCurrentProfile = location.pathname === profilePath;
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likes, setLikes] = useState(post.likes_count);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
@@ -30,21 +33,29 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
   async function handleLike() {
     if (!isLiked) {
       try {
+        setIsLoading(true);
+
         await likeService.createLike(post.id);
 
         setLikes((prev) => prev + 1);
         setIsLiked(true);
       } catch (error) {
         console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     } else {
       try {
+        setIsLoading(true);
+
         await likeService.deleteLike(post.id);
 
         setLikes((prev) => prev - 1);
         setIsLiked(false);
       } catch (error) {
         console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     }
   }
@@ -52,10 +63,14 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
   async function handleDelete() {
     if (isOwnPost) {
       try {
+        setIsLoading(true);
+
         await postService.deletePost(post.id);
         onDelete();
       } catch (error) {
         console.log(error);
+      } finally {
+        setIsLoading(false);
       }
     }
   }
@@ -106,8 +121,9 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
           {isOwnPost && (
             <button
               title="Delete post"
+              disabled={isLoading}
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 cursor-pointer transition px-2 py-1 rounded-lg text-white"
+              className="bg-red-600 hover:bg-red-700 disabled:cursor-wait cursor-pointer transition px-2 py-1 rounded-lg text-white"
             >
               <Trash2 size={20} />
             </button>
@@ -130,8 +146,9 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
         <button
           title="Like"
           onClick={handleLike}
+          disabled={isLoading}
           className={`
-            flex items-center gap-1 cursor-pointer
+            flex items-center gap-1 cursor-pointer disabled:cursor-wait
             ${
               isLiked
                 ? "text-pink-500 hover:text-pink-400 transition"
@@ -144,8 +161,9 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
 
         <button
           title="Comments"
+          disabled={isCommentsLoading}
           onClick={() => setShowComments((prev) => !prev)}
-          className="flex items-center gap-1 text-zinc-400 cursor-pointer hover:text-white transition"
+          className="flex items-center gap-1 text-zinc-400 cursor-pointer disabled:cursor-wait hover:text-white transition"
         >
           <MessageSquareMore size={20} /> {commentsCount}
         </button>
@@ -156,6 +174,7 @@ export function PostCard({ post, isOwnPost, onDelete }: Props) {
           postId={post.id}
           onCommentCreated={() => setCommentsCount((prev) => prev + 1)}
           onCommentDeleted={() => setCommentsCount((prev) => prev - 1)}
+          onLoadingChange={setIsCommentsLoading}
         />
       )}
 

@@ -9,7 +9,7 @@ class TestRegisterViewSet:
 
     def test_register_user_success(self, api_client):
         """Should register a new user successfully."""
-        data = {'username': 'newuser', 'email': 'newuser@example.com', 'password': 'ps574839', 'password_confirm': 'ps574839'}
+        data = {'username': 'newuser', 'email': 'newuser@example.com', 'birth_date': '2000-01-01', 'password': 'ps574839', 'password_confirm': 'ps574839'}
         response = api_client.post('/api/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -18,14 +18,14 @@ class TestRegisterViewSet:
 
     def test_register_password_too_short(self, api_client):
         """Password must have at least 8 characters."""
-        data = {'username': 'newuser', 'email': 'newuser@example.com', 'password': 'short', 'password_confirm': 'short'}
+        data = {'username': 'newuser', 'email': 'newuser@example.com', 'birth_date': '2000-01-01', 'password': 'short', 'password_confirm': 'short'}
         response = api_client.post('/api/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_register_password_mismatch(self, api_client):
         """Passwords must match."""
-        data = {'username': 'newuser', 'email': 'newuser@example.com', 'password': 'ps574839', 'password_confirm': 'wrongpass123'}
+        data = {'username': 'newuser', 'email': 'newuser@example.com', 'birth_date': '2000-01-01', 'password': 'ps574839', 'password_confirm': 'wrongpass123'}
         response = api_client.post('/api/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -34,7 +34,7 @@ class TestRegisterViewSet:
         """Should not allow duplicate emails."""
         user_factory(email='existing@example.com')
 
-        data = {'username': 'newuser', 'email': 'existing@example.com', 'password': 'ps574839', 'password_confirm': 'ps57483939'}
+        data = {'username': 'newuser', 'email': 'existing@example.com', 'birth_date': '2000-01-01', 'password': 'ps574839', 'password_confirm': 'ps57483939'}
         response = api_client.post('/api/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -43,7 +43,7 @@ class TestRegisterViewSet:
         """Should not allow duplicate usernames."""
         user_factory(username='existing')
 
-        data = {'username': 'existing', 'email': 'newemail@example.com', 'password': 'ps574839', 'password_confirm': 'ps57483939'}
+        data = {'username': 'existing', 'email': 'newemail@example.com', 'birth_date': '2000-01-01', 'password': 'ps574839', 'password_confirm': 'ps57483939'}
         response = api_client.post('/api/auth/register/', data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST

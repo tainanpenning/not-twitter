@@ -6,6 +6,7 @@ import { login } from "../store/slices/authSlice";
 import { getBackendErrorMessage } from "../utils/extractErrorData";
 
 import type { AppDispatch } from "../store";
+import { LoadingScreen } from "../components/layout/loading";
 
 export function LoginPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -48,6 +49,10 @@ export function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
   return (

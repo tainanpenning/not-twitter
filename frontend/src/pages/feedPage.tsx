@@ -7,6 +7,7 @@ import { PostCard } from "../components/posts/postCard";
 import { postService } from "../services/postService";
 
 import type { Post } from "../types";
+import { Loader } from "lucide-react";
 
 export function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -39,7 +40,9 @@ export function FeedPage() {
         <CreatePostForm onPostCreated={loadFeed} />
 
         {loading ? (
-          <div className="text-center text-zinc-400">Loading feed...</div>
+          <div className="bg-zinc-900 rounded-2xl p-8 text-center text-zinc-400">
+            <Loader className="animate-spin mx-auto" size={30} />
+          </div>
         ) : posts.length === 0 ? (
           <div className="bg-zinc-900 rounded-2xl p-8 text-center text-zinc-400">
             Your feed is empty.

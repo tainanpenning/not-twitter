@@ -25,7 +25,7 @@ export function SearchModal({ close, position }: Props) {
       const data = await profileService.searchUsers(search);
 
       setUsers(data.results);
-    }, 500);
+    }, 200);
 
     return () => {
       clearTimeout(timeout);

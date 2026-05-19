@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { authService } from "../services/authService";
 import { getBackendErrorMessage } from "../utils/extractErrorData";
 import { validateBirthDate } from "../utils/validateBirthDate";
+import { LoadingScreen } from "../components/layout/loading";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -45,6 +46,10 @@ export function RegisterPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
   return (

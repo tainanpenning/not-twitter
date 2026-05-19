@@ -23,7 +23,6 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env')
-load_dotenv(BASE_DIR / '.env.dev')
 
 
 # Quick-start development settings - unsuitable for production
@@ -90,7 +89,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {"default": dj_database_url.parse(os.getenv("DATABASE_URL"))}
+DATABASES = {"default": dj_database_url.parse(os.getenv("DEV_DATABASE_URL") if DEBUG else os.getenv("DATABASE_URL"))}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

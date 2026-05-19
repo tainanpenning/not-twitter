@@ -17,12 +17,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())],
     )
+    birth_date = serializers.DateField(source='profile.birth_date', required=True)
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'password_confirm')
+        fields = ['username', 'email', 'birth_date', 'password', 'password_confirm']
 
     def validate_username(self, data):
         data = data.strip()
@@ -55,7 +56,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm', None)
+
+        profile_data = validated_data.pop('profile', {})
+
         user = User.objects.create_user(username=validated_data['username'], email=validated_data['email'], password=validated_data['password'])
+
+        user.profile.birth_date = profile_data.get('birth_date')
+        user.profile.save()
+
         return user
 
 
