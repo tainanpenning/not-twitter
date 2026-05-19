@@ -34,7 +34,7 @@ export function ProfileEditForm({ profile }: Props) {
   const hasChanges =
     display_name.trim() !== (profile.display_name || "").trim() ||
     bio.trim() !== (profile.bio || "").trim() ||
-    birth_date !== profile.birth_date ||
+    birth_date.trim() !== (profile.birth_date || "").trim() ||
     image !== null;
 
   const cancelChanges = () => {
@@ -136,7 +136,7 @@ export function ProfileEditForm({ profile }: Props) {
         id="display-name"
         value={display_name}
         onChange={(e) => setDisplayName(e.target.value)}
-        placeholder="Nome de exibição"
+        placeholder="Display name"
         className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-white"
       />
 
@@ -144,6 +144,7 @@ export function ProfileEditForm({ profile }: Props) {
         id="bio"
         value={bio}
         onChange={(e) => setBio(e.target.value)}
+        placeholder="Bio"
         maxLength={500}
         className="w-full min-h-[140px] bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-white resize-none"
       />
@@ -152,6 +153,7 @@ export function ProfileEditForm({ profile }: Props) {
         id="birth-date"
         value={birth_date}
         onChange={(e) => setBirthDate(e.target.value)}
+        placeholder="Birth date"
         className="w-full bg-zinc-800 cursor-text border border-zinc-700 rounded-xl p-4 text-white"
       />
 
