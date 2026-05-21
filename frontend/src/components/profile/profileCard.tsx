@@ -11,6 +11,7 @@ interface Props {
   postsCount: number;
   isOwnProfile: boolean;
   onFollow: () => void;
+  loadingFollow: boolean;
 }
 
 export function ProfileHeader({
@@ -18,6 +19,7 @@ export function ProfileHeader({
   postsCount,
   isOwnProfile,
   onFollow,
+  loadingFollow,
 }: Props) {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
 
@@ -54,7 +56,8 @@ export function ProfileHeader({
             ) : (
               <button
                 onClick={onFollow}
-                className={`px-5 py-2 cursor-pointer rounded-lg text-white ${
+                disabled={loadingFollow}
+                className={`px-5 py-2 cursor-pointer disabled:cursor-wait rounded-lg text-white ${
                   profile.is_following
                     ? "bg-zinc-700 hover:bg-zinc-600"
                     : "bg-blue-600 hover:bg-blue-700"

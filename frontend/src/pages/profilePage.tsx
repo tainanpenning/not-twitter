@@ -19,8 +19,11 @@ export function ProfilePage() {
   const currentUser = useSelector((state: RootState) => state.authSlice.user);
   const { username } = useParams();
   const normalizedUsername = username?.replace("@", "");
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+
+  const [loadingFollow, setLoadingFollow] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const isOwnProfile = currentUser?.username === normalizedUsername;
@@ -61,6 +64,8 @@ export function ProfilePage() {
     if (!normalizedUsername || !profile) return;
 
     try {
+      setLoadingFollow(true);
+
       await followService.toggleFollow(normalizedUsername);
 
       setProfile((prev) => {
@@ -77,6 +82,8 @@ export function ProfilePage() {
       });
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoadingFollow(false);
     }
   }
 
@@ -98,6 +105,7 @@ export function ProfilePage() {
           postsCount={posts.length}
           isOwnProfile={isOwnProfile}
           onFollow={handleFollow}
+          loadingFollow={loadingFollow}
         />
 
         <div className="space-y-5">
