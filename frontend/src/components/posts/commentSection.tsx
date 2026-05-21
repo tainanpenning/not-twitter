@@ -26,8 +26,6 @@ export function CommentSection({
   const currentUser = useSelector((state: RootState) => state.authSlice.user);
 
   const location = useLocation();
-  const profilePath = `/profile/@${currentUser?.username}`;
-  const isCurrentProfile = location.pathname === profilePath;
 
   const [isLoading, setIsLoading] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -121,7 +119,7 @@ export function CommentSection({
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
-              {isCurrentProfile ? (
+              {comment.author_username === location.pathname.split("@")[1] ? (
                 <img
                   src={
                     comment.author_avatar ||
@@ -131,7 +129,7 @@ export function CommentSection({
                 />
               ) : (
                 <Link
-                  to={profilePath}
+                  to={`/profile/@${comment.author_username}`}
                   className="w-10 h-10 rounded-full object-cover"
                 >
                   <img
@@ -147,12 +145,13 @@ export function CommentSection({
               <div className="flex flex-col bg-zinc-800 rounded-xl p-3 flex-1">
                 <div className="flex justify-between items-center">
                   <div className="flex gap-2">
-                    {isCurrentProfile ? (
+                    {comment.author_username ===
+                    location.pathname.split("@")[1] ? (
                       <h3 className="font-semibold text-white">
                         {comment.author_display_name || comment.author_username}
                       </h3>
                     ) : (
-                      <Link to={profilePath}>
+                      <Link to={`/profile/@${comment.author_username}`}>
                         <h3 className="font-semibold text-white">
                           {comment.author_display_name ||
                             comment.author_username}
